@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact — Marvin Darvis</title>
+  <meta name="description" content="Get in touch with Marvin Darvis about consulting, collaboration, speaking, or training on evidence-based, technology-enabled mental health care." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="nav">
+      <a class="nav-brand" href="index.html"><span class="mark">M</span> Marvin Darvis</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="focus-areas.html">Focus Areas</a></li>
+        <li><a href="insights.html">Insights</a></li>
+        <li><a href="community.html">Community</a></li>
+        <li><a href="contact.html" class="nav-cta">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section style="padding-bottom:0;">
+      <div class="container">
+        <span class="eyebrow">Contact</span>
+        <h1 style="max-width:20ch;">Let's talk</h1>
+        <p style="max-width:60ch; font-size:1.05rem;">
+          Whether it's a consulting or collaboration inquiry, a speaking or training request,
+          or a question about the community — send a note and I'll get back to you.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container grid grid-2" style="align-items:start;">
+
+        <div class="form-card">
+          <form action="https://formspree.io/f/your-form-id" method="POST" data-async>
+            <div class="field">
+              <label for="c-name">Name</label>
+              <input type="text" id="c-name" name="name" required>
+            </div>
+            <div class="field">
+              <label for="c-email">Email</label>
+              <input type="email" id="c-email" name="email" required>
+            </div>
+            <div class="field">
+              <label for="c-org">Organization (optional)</label>
+              <input type="text" id="c-org" name="organization">
+            </div>
+            <div class="field">
+              <label for="c-reason">What's this about?</label>
+              <select id="c-reason" name="reason">
+                <option value="">Select one…</option>
+                <option value="consulting">Consulting / collaboration</option>
+                <option value="speaking">Speaking / training</option>
+                <option value="community">Community question</option>
+                <option value="press">Press / media</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="c-message">Message</label>
+              <textarea id="c-message" name="message" rows="5" required></textarea>
+            </div>
+            <button class="btn btn-primary btn-block" type="submit">Send message</button>
+            <p class="form-status" role="status"></p>
+          </form>
+        </div>
+
+        <div>
+          <h2 class="mt-0">Other ways to reach me</h2>
+          <p>
+            Prefer email? Reach me directly at
+            <a href="mailto:marvindarvis@gmail.com" style="color:var(--terracotta-dark); font-weight:600;">marvindarvis@gmail.com</a>.
+          </p>
+          <div class="tag-row" style="margin:24px 0 32px;">
+            <span class="tag">Consulting</span>
+            <span class="tag alt">Speaking &amp; Training</span>
+            <span class="tag">Research collaboration</span>
+            <span class="tag alt">Press</span>
+          </div>
+          <h3>Follow along</h3>
+          <div class="social-row">
+            <a href="#" aria-label="LinkedIn — add your profile link" title="Add your LinkedIn URL">in</a>
+            <a href="#" aria-label="X / Twitter — add your profile link" title="Add your X URL">X</a>
+            <a href="mailto:marvindarvis@gmail.com" aria-label="Email Marvin">@</a>
+          </div>
+          <div class="notice-box" style="margin-top:32px;">
+            This form needs a real endpoint before it goes live — wire it up to Formspree or
+            similar. See README.md, "Wiring up the forms." Until then, the email link above
+            always works.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a class="nav-brand" href="index.html"><span class="mark">M</span> Marvin Darvis</a>
+          <p style="margin-top:12px;max-width:320px;">Mental Health &amp; Behavioral Health Innovation Specialist — building evidence-informed, technology-enabled systems for accessible care.</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="about.html">About</a>
+          <a href="focus-areas.html">Focus Areas</a>
+          <a href="insights.html">Insights</a>
+          <a href="community.html">Community</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+        <div class="social-row" aria-label="Social links">
+          <a href="#" aria-label="LinkedIn — add your profile link" title="Add your LinkedIn URL">in</a>
+          <a href="#" aria-label="X / Twitter — add your profile link" title="Add your X URL">X</a>
+          <a href="mailto:marvindarvis@gmail.com" aria-label="Email Marvin">@</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span data-year>2026</span> Marvin Darvis. All rights reserved.</span>
+        <span>Built with care for mental health innovation.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
