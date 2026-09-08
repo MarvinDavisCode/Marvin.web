@@ -1,0 +1,42 @@
+name: Publish Approved Drafts
+
+# Stage 3 of the Editorial OS: watches Airtable's Drafts table for rows
+# Marvin has marked Status "Approved" (Target "Blog"), turns each into a
+# real insight-post HTML file plus a matching teaser card on insights.html,
+# and opens ONE pull request with everything found this run. Never commits
+# straight to main — nothing reaches the live site until Marvin reviews
+# and merges the PR himself. See automation/README.md.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours — cheap to check, low latency once you approve something
+  workflow_dispatch: {}      # lets you trigger a run manually from the Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, so branching off the default branch is clean
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r automation/requirements.txt
+
+      - name: Run publish-on-approval
+        env:
+          AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+          AIRTABLE_BASE_ID: appGoegWQtI3TmtNW
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python automation/scripts/publish_approved.py

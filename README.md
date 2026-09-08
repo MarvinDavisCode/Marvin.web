@@ -21,12 +21,17 @@ marvin-site/
 ├── assets/
 │   ├── marvin-headshot.jpg   Photo used on About + Home hero
 │   └── afrinex-logo.png      Afrinex brand mark, used on community.html + afrinex.html
-├── automation/          Editorial OS: the source-monitoring GitHub Action
+├── automation/          Editorial OS: source monitor, scoring, and publishing
 │   ├── README.md            Setup guide — start here
 │   ├── requirements.txt
-│   └── scripts/source_monitor.py
+│   └── scripts/
+│       ├── source_monitor.py       Stage 1: RSS feeds -> Candidates
+│       ├── relevance_scorer.py     Stage 2: Candidates -> scored + Drafts
+│       └── publish_approved.py     Stage 3: Approved Drafts -> PR
 └── .github/workflows/
-    └── source-monitor.yml   Daily scheduled run of the source monitor
+    ├── source-monitor.yml      Daily scheduled run of the source monitor
+    ├── relevance-scorer.yml    Daily scheduled run of the relevance scorer
+    └── publish-approved.yml    Runs every 6 hours, opens PRs for approvals
 ```
 
 Every page shares the same header/footer markup and the same `css/style.css` and
@@ -132,11 +137,15 @@ at them — their docs walk through the exact records to add.
 
 ## Editorial OS automation
 
-`automation/` and `.github/workflows/source-monitor.yml` together are Stage
-1 of the automated content pipeline: a daily GitHub Action that checks your
-Airtable Sources for new articles and logs them as Candidates for review.
-See `automation/README.md` for the one-time setup (an Airtable token, added
-as a GitHub secret) and what the later stages will do.
+`automation/` and `.github/workflows/` together are Stages 1–3 of the
+automated content pipeline: GitHub Actions that check your Airtable Sources
+for new articles, score them against your Focus Areas with Claude, write
+full drafts for the promising ones into Airtable's Drafts table for your
+review, and — once you mark one Approved — turn it into a real page on the
+site via a pull request you merge yourself. Nothing reaches the live site
+without that merge. See `automation/README.md` for the one-time setup (an
+Airtable token and an Anthropic API key, both added as GitHub secrets) and
+what the remaining stage (the weekly Afrinex newsletter) will do.
 
 ## Accessibility & performance notes
 
