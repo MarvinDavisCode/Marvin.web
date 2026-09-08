@@ -249,10 +249,25 @@ the same list") — nothing is lost, and it doesn't require reverting anything.
 
 No new secret is needed — this stage reuses `AIRTABLE_PAT` and the
 `GITHUB_TOKEN` that GitHub Actions provides to every workflow automatically.
-The only thing to check is that the workflow file's `permissions:` block
-(already set in `publish-approved.yml`) grants `contents: write` and
-`pull-requests: write` — without those, the built-in token can't push a
-branch or open a PR, and the run will fail with a permissions error.
+The workflow file's `permissions:` block (already set in
+`publish-approved.yml`) grants `contents: write` and `pull-requests: write`,
+but that alone isn't enough — GitHub also has a **repo-level setting** that
+blocks the built-in token from opening PRs by default, separately from the
+workflow file. Turn it on once, before the first real run:
+
+1. In your repo on GitHub, go to **Settings → Actions → General**.
+2. Scroll to **Workflow permissions**.
+3. Check **"Allow GitHub Actions to create and approve pull requests."**
+4. Click **Save**.
+
+Skip this and the run will get all the way to opening the PR, then fail
+with `"GitHub Actions is not permitted to create or approve pull requests"`
+(403) — the branch will already have been pushed at that point, so you'll
+also see a stray `editorial/publish-*` branch on GitHub with no matching
+PR. That branch is harmless: once this setting is on, the next run picks
+the same Draft back up (its Status is still "Approved" and its GitHub PR
+URL is still blank) and opens a fresh PR normally. You can delete the old
+stray branch or just ignore it.
 
 ### Stage 3 — Triggering a run manually (to test it)
 
@@ -269,6 +284,44 @@ Status to `Approved` (it needs Target `Blog`, which is already the default
 for anything Stage 2 writes), then trigger a run. You should see a new
 branch and pull request appear on GitHub, and that Draft's GitHub PR URL
 field fill in with a link to it.
+
+## Troubleshooting
+
+**"A run finished green, but nothing seems to have happened."** A
+successful (green) run in GitHub's Actions tab only means the script didn't
+crash — it can still legitimately find "0 to do" and exit cleanly, which
+looks identical to a silent failure at a glance. Before assuming something
+is broken, open the run's log and check what it actually reports finding.
+Two specific gotchas to check first:
+
+- **Fact-Check Status vs. Status, on a Draft.** These are two separate
+  fields in the Drafts table and it's easy to update the wrong one. Stage 3
+  only looks at the **Status** field (it must be exactly `Approved`) — it
+  ignores **Fact-Check Status** entirely (that field is for your own
+  tracking of whether you've verified the draft's facts against the source
+  article). Setting Fact-Check Status to "Verified" but leaving Status at
+  "Needs Review" means Stage 3 correctly finds nothing to publish and exits
+  cleanly — no error, just a no-op. Make sure it's **Status** that's set to
+  `Approved`.
+- **The GitHub Actions PR-permission repo setting** (see "Stage 3 —
+  One-time setup" above) — if it's off, you'll see an explicit 403 error in
+  the log rather than a silent no-op, but it's easy to miss since the run
+  still shows a partial success (the branch and content were created; only
+  the PR failed).
+
+**If you're extending these scripts**: every Airtable list/GET call in
+`source_monitor.py`, `relevance_scorer.py`, and `publish_approved.py` passes
+`returnFieldsByFieldId=true`. All three scripts read fields by field ID
+(e.g. `fldZkd5g4bNhK8ocW`), not by field name, so they stay correct even if
+someone renames a column in the Airtable UI — but Airtable's default
+list/GET response is keyed by field **name** unless you explicitly ask for
+ID-keyed output with that parameter. Drop it from a new call and every
+`.get()` against the response will silently return `None` instead of
+erroring — exactly the kind of bug that produces a "successful" run that
+quietly does nothing (this happened once already; see git history around
+2026-09-08 if you want the full story). Record create/update (`POST`/
+`PATCH`) calls are unaffected — they already accept field IDs as input keys
+regardless of this parameter.
 
 ## Known source issues (see Airtable Sources table for details)
 

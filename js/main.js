@@ -1,8 +1,49 @@
 // Marvin Darvis — Personal Site
-// Small progressive-enhancement script: mobile nav toggle + form status messaging.
+// Small progressive-enhancement script: mobile nav toggle, scroll-reveal
+// animation, header shrink-on-scroll, and form status messaging.
 // No external dependencies. Safe to defer-load.
 
 document.addEventListener('DOMContentLoaded', function () {
+  /* ---- Header: condense + solidify on scroll (Apple-style nav) ---- */
+  var header = document.querySelector('.site-header');
+  if (header) {
+    var setScrolled = function () {
+      header.classList.toggle('is-scrolled', window.scrollY > 8);
+    };
+    setScrolled();
+    window.addEventListener('scroll', setScrolled, { passive: true });
+  }
+
+  /* ---- Scroll-reveal: fade + rise elements into view as they appear ---- */
+  var revealSelector = '.card, .post-card, .detail-row, .section-head, .cta-band, ' +
+    '.form-card, .hero-grid > div, .avatar-frame, .bio-layout > *';
+  var revealEls = document.querySelectorAll(revealSelector);
+
+  if ('IntersectionObserver' in window && revealEls.length) {
+    // Stagger siblings within the same parent for a cascading effect.
+    var seen = new Map();
+    revealEls.forEach(function (el) {
+      var parent = el.parentElement;
+      var index = seen.has(parent) ? seen.get(parent) + 1 : 0;
+      seen.set(parent, index);
+      el.style.transitionDelay = Math.min(index * 90, 360) + 'ms';
+    });
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+    revealEls.forEach(function (el) { observer.observe(el); });
+  } else {
+    // No IntersectionObserver support (or nothing to observe) — show everything.
+    revealEls.forEach(function (el) { el.classList.add('in-view'); });
+  }
+
   /* ---- Mobile nav toggle ---- */
   var toggle = document.querySelector('.nav-toggle');
   var links = document.querySelector('.nav-links');

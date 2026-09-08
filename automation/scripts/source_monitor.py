@@ -117,7 +117,11 @@ def get_active_sources():
     'Blocked' sources — those aren't ready for automated fetching yet."""
     sources = []
     url = f"{API_ROOT}/{BASE_ID}/{SOURCES_TABLE}"
-    params = {"pageSize": PAGE_SIZE}
+    # returnFieldsByFieldId is essential: without it, Airtable keys the
+    # returned `fields` object by field NAME, but every constant in this
+    # script (SRC_FIELD_STATUS etc.) is a field ID — so every .get() below
+    # would silently return None without this.
+    params = {"pageSize": PAGE_SIZE, "returnFieldsByFieldId": "true"}
 
     while True:
         resp = _request_with_retry("GET", url, headers=_headers(), params=params)
@@ -157,7 +161,10 @@ def get_existing_candidate_urls():
     create a duplicate row for the same article."""
     existing = set()
     url = f"{API_ROOT}/{BASE_ID}/{CANDIDATES_TABLE}"
-    params = {"pageSize": PAGE_SIZE, "fields[]": CAND_FIELD_URL}
+    # Not using `fields[]` to narrow the response here — whether that param
+    # expects field names or IDs when returnFieldsByFieldId is set is not
+    # worth the ambiguity for a table this size; just fetch full records.
+    params = {"pageSize": PAGE_SIZE, "returnFieldsByFieldId": "true"}
 
     while True:
         resp = _request_with_retry("GET", url, headers=_headers(), params=params)

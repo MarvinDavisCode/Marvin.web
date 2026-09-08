@@ -7,7 +7,7 @@
   <meta name="description" content="Join a community of practitioners, educators, researchers, and program teams working on evidence-based, technology-enabled mental health care." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -44,65 +44,32 @@
     </section>
 
     <section>
-      <div class="container grid grid-2" style="align-items:start;">
-        <div>
-          <h2>Who this is for</h2>
-          <ul class="list-check">
-            <li>Clinicians and practitioners working in mental and behavioral health</li>
-            <li>Educators and school-based support staff</li>
-            <li>Program teams and nonprofit / government staff designing services</li>
-            <li>Researchers in psychology, public health, or implementation science</li>
-            <li>Builders exploring AI and behavioral science applications, responsibly</li>
-          </ul>
-        </div>
-        <div>
-          <h2>What you'll get</h2>
-          <ul class="list-check">
-            <li>Occasional notes on evidence-based practice and what's actually working</li>
-            <li>Honest takes on where AI helps in mental health care — and where it doesn't</li>
-            <li>Lessons from training, program delivery, and referral systems in the field</li>
-            <li>Early access to new writing, resources, and the occasional event</li>
-          </ul>
-        </div>
+      <div class="container">
+        <h2>Who this is for</h2>
+        <ul class="list-check" style="max-width:640px;">
+          <li>Clinicians and practitioners working in mental and behavioral health</li>
+          <li>Educators and school-based support staff</li>
+          <li>Program teams and nonprofit / government staff designing services</li>
+          <li>Researchers in psychology, public health, or implementation science</li>
+          <li>Builders exploring AI and behavioral science applications, responsibly</li>
+        </ul>
       </div>
     </section>
 
-    <!-- ===================== SIGNUP ===================== -->
+    <!-- ===================== AFRINEX PROMO ===================== -->
     <section class="section-alt">
-      <div class="container" style="max-width:560px;">
-        <div class="form-card">
-          <h2 class="mt-0 text-center">Join the community</h2>
-          <p class="text-center" style="margin-bottom:24px;">
-            One or two emails a month. No spam, unsubscribe anytime.
-          </p>
-          <form action="https://formspree.io/f/your-form-id" method="POST" data-async>
-            <div class="field">
-              <label for="name">Name</label>
-              <input type="text" id="name" name="name" required>
-            </div>
-            <div class="field">
-              <label for="email">Email</label>
-              <input type="email" id="email" name="email" required>
-            </div>
-            <div class="field">
-              <label for="role">What best describes you? (optional)</label>
-              <select id="role" name="role">
-                <option value="">Select one…</option>
-                <option value="clinician">Clinician / practitioner</option>
-                <option value="educator">Educator / school staff</option>
-                <option value="program">Program / nonprofit / government staff</option>
-                <option value="researcher">Researcher</option>
-                <option value="builder">Builder / technologist</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <button class="btn btn-primary btn-block" type="submit">Join the community</button>
-            <p class="form-status" role="status"></p>
-          </form>
-        </div>
-        <div class="notice-box" style="margin-top:24px; margin-bottom:0;">
-          This form needs a real endpoint before it goes live — wire it up to Formspree,
-          Mailchimp, or ConvertKit. See README.md, "Wiring up the forms."
+      <div class="container" style="max-width:720px;">
+        <div class="card" style="display:flex; align-items:center; gap:28px; flex-wrap:wrap;">
+          <img src="assets/afrinex-logo.png" alt="Afrinex logo" style="width:88px; height:auto; border-radius:18px; flex-shrink:0;">
+          <div style="flex:1; min-width:240px;">
+            <span class="post-tag">Weekly Newsletter</span>
+            <h3 style="margin-top:6px;">Afrinex</h3>
+            <p>
+              The community's weekly newsletter — evidence-based practice, AI in mental health,
+              and lessons from the field, delivered every week.
+            </p>
+            <a class="btn btn-primary" href="afrinex.html" style="margin-top:12px;">Join Afrinex →</a>
+          </div>
         </div>
       </div>
     </section>

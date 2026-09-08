@@ -155,7 +155,12 @@ def fetch_ready_drafts(limit):
         f'{{{DRAFT_FIELD_TARGET}}}="{DRAFT_TARGET_BLOG}", '
         f'{{{DRAFT_FIELD_GITHUB_PR_URL}}}="")'
     )
-    params = {"pageSize": PAGE_SIZE, "filterByFormula": formula}
+    # returnFieldsByFieldId is essential: without it, Airtable keys the
+    # returned `fields` object by field NAME, but every constant in this
+    # script (DRAFT_FIELD_TITLE etc.) is a field ID — every .get() against
+    # a fetched record would otherwise silently return None (this is
+    # exactly what caused the "Untitled" / "insight-untitled.html" bug).
+    params = {"pageSize": PAGE_SIZE, "returnFieldsByFieldId": "true", "filterByFormula": formula}
 
     while len(records) < limit:
         resp = _request_with_retry("GET", url, headers=_airtable_headers(), params=params)
@@ -174,7 +179,8 @@ def fetch_ready_drafts(limit):
 
 def fetch_candidate(record_id):
     url = f"{AIRTABLE_API_ROOT}/{BASE_ID}/{CANDIDATES_TABLE}/{record_id}"
-    resp = _request_with_retry("GET", url, headers=_airtable_headers())
+    resp = _request_with_retry("GET", url, headers=_airtable_headers(),
+                                params={"returnFieldsByFieldId": "true"})
     if resp is None or resp.status_code != 200:
         log.warning("Could not fetch related Candidate %s: %s", record_id, getattr(resp, "text", "")[:200])
         return None

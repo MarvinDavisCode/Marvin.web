@@ -177,7 +177,11 @@ def fetch_all_records(table_id, extra_params=None):
     only (Taxonomy, Sources) — Candidates uses a filtered fetch instead."""
     records = []
     url = f"{AIRTABLE_API_ROOT}/{BASE_ID}/{table_id}"
-    params = {"pageSize": PAGE_SIZE}
+    # returnFieldsByFieldId is essential: without it, Airtable keys the
+    # returned `fields` object by field NAME, but every constant in this
+    # script (TAX_FIELD_NAME, CAND_FIELD_TITLE, etc.) is a field ID — so
+    # every .get() against a fetched record would silently return None.
+    params = {"pageSize": PAGE_SIZE, "returnFieldsByFieldId": "true"}
     if extra_params:
         params.update(extra_params)
 
@@ -229,6 +233,7 @@ def fetch_new_candidates(limit):
     url = f"{AIRTABLE_API_ROOT}/{BASE_ID}/{CANDIDATES_TABLE}"
     params = {
         "pageSize": PAGE_SIZE,
+        "returnFieldsByFieldId": "true",
         "filterByFormula": f"{{{CAND_FIELD_STATUS}}} = \"{CAND_STATUS_NEW}\"",
     }
 
