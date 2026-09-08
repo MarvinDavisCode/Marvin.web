@@ -1,0 +1,32 @@
+name: Source Monitor
+
+# Stage 1 of the Editorial OS: checks every Active feed in Airtable's Sources
+# table and adds any new articles as rows in the Candidates table. Does not
+# score, draft, or publish anything — see automation/README.md for the full
+# pipeline and what still needs to be built.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily, 06:00 UTC (~09:00 Africa/Nairobi)
+  workflow_dispatch: {}    # lets you trigger a run manually from the Actions tab
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r automation/requirements.txt
+
+      - name: Run source monitor
+        env:
+          AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+          AIRTABLE_BASE_ID: appGoegWQtI3TmtNW
+        run: python automation/scripts/source_monitor.py
