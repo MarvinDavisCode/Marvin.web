@@ -1,0 +1,43 @@
+name: Weekly Newsletter
+
+# Stage 4 of the Editorial OS: once a week, compiles a Buttondown DRAFT
+# (never sent automatically) for the Afrinex newsletter — a recap of any
+# blog post(s) published/PR'd this week, plus a short AI-written blurb for
+# each Candidate Stage 2 flagged as a "Newsletter Candidate" but not a full
+# post. Every included item is saved as a Drafts row and linked from a new
+# Weekly Newsletters row. Nothing is ever emailed — Marvin reviews, adds
+# his own Editor's Note, and sends it himself from Buttondown. See
+# automation/README.md.
+
+on:
+  schedule:
+    - cron: '30 6 * * 1'   # Mondays, 06:30 UTC (~09:30 Nairobi) — after that
+                             # morning's Source Monitor + Relevance Scorer runs
+  workflow_dispatch: {}     # lets you trigger a run manually from the Actions tab
+
+jobs:
+  compile-newsletter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r automation/requirements.txt
+
+      - name: Run weekly newsletter compiler
+        env:
+          AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+          AIRTABLE_BASE_ID: appGoegWQtI3TmtNW
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+          # Replace with your real site URL (no trailing content after the
+          # domain/path) so the newsletter's blog recap can link straight to
+          # your Insights page. Leave blank to mention posts without a link.
+          SITE_BASE_URL: ""
+        run: python automation/scripts/weekly_newsletter.py

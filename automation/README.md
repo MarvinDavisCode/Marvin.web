@@ -1,8 +1,8 @@
 # Editorial OS — Automation
 
 This folder holds the automated content pipeline described in the Claude
-Project doc (`claude/editorial-automation-plan.md`). Three stages are live
-so far:
+Project doc (`claude/editorial-automation-plan.md`). All four stages are
+live:
 
 - **Stage 1 — Source Monitor**: checks your Airtable **Sources** table
   daily and drops any new articles into the **Candidates** table.
@@ -12,11 +12,16 @@ so far:
 - **Stage 3 — Publish Approved Drafts**: watches for Drafts you've marked
   "Approved", turns each into a real page on the site, and opens a pull
   request for you to merge — nothing goes live without that merge.
+- **Stage 4 — Weekly Newsletter**: once a week, compiles a Buttondown
+  *draft* (never sent automatically) recapping the week's published post(s)
+  plus short AI-written blurbs for anything Stage 2 flagged as a newsletter
+  mention — ready for you to add your Editor's Note and send yourself.
 
 Only Stage 3 ever touches the site itself, and even then only through a PR
-you review. Stage 4 (the Afrinex newsletter) isn't built yet. Every draft
-this pipeline produces sits in Airtable waiting for you to read, edit,
-approve, or reject it.
+you review. Stage 4 only ever creates a *draft* email — nothing is ever
+sent without you opening Buttondown and clicking Send yourself. Every
+draft this pipeline produces sits in Airtable (or Buttondown) waiting for
+you to read, edit, approve, or send it.
 
 ## Stage 1 — Source Monitor: how it works
 
@@ -323,6 +328,102 @@ quietly does nothing (this happened once already; see git history around
 `PATCH`) calls are unaffected — they already accept field IDs as input keys
 regardless of this parameter.
 
+## Stage 4 — Weekly Newsletter: how it works
+
+Once a week, this stage compiles a **draft** email for the Afrinex
+newsletter — it never sends anything. Two kinds of content go into it:
+
+1. **"This week on the blog"** — any Drafts row with Target "Blog" that
+   already has a GitHub PR URL (meaning Stage 3 has published it, or at
+   least opened a PR for it) and hasn't been recapped in a previous
+   newsletter yet.
+2. **"Worth a quick read"** — Candidates Stage 2 flagged as Status
+   "Newsletter Candidate" (relevant, but not enough for a full post) that
+   haven't been turned into a newsletter blurb yet. Each gets a short
+   (2-3 sentence) blurb written by Claude, strictly from that Candidate's
+   own title/source/summary — the same no-invented-facts rule used for
+   blog drafts.
+
+Every included item becomes (or already is) a row in the **Drafts** table
+(newsletter blurbs get Target "Newsletter"), and all of them get linked
+from one new **Weekly Newsletters** row for the week, with its **Status**
+set to "Needs Review" and an explicit Editor's Note placeholder in the
+compiled email. The email itself is pushed to Buttondown as a **draft
+only** — nothing is sent until you open it in Buttondown, add your own
+Editor's Note, and click Send yourself. The Weekly Newsletters row's
+**Buttondown Draft URL** field is filled in if Buttondown's response
+includes one; if not, the run's log tells you to check your Buttondown
+dashboard's Drafts tab directly rather than guessing at a link.
+
+One run never processes the same blog post or the same Candidate twice:
+once a Draft is linked into a Weekly Newsletters row, it's excluded from
+future runs automatically (via the same link field, in both directions).
+A blurb that fails to write (a bad model response, a network hiccup) is
+just skipped for this run — the Candidate stays uncovered and gets picked
+up again automatically next week, with no separate retry step needed.
+
+## Stage 4 — One-time setup
+
+This stage needs one new secret: a **Buttondown API key**.
+
+1. **Create a Buttondown account** at [buttondown.email](https://buttondown.email)
+   if you don't already have one (this is the "Decision: Buttondown" ESP
+   from the Claude Project doc).
+2. **Get your API key** from your Buttondown account's settings/API page.
+3. **Add it as a GitHub repo secret**, the same way as the others:
+   **Settings → Secrets and variables → Actions → New repository secret**.
+   - Name: `BUTTONDOWN_API_KEY`
+   - Value: paste the key.
+   - Save.
+4. **Optional but recommended**: open
+   `.github/workflows/weekly-newsletter.yml` and set `SITE_BASE_URL` to
+   your real site's URL (e.g. `https://marvindarvis.com` or your GitHub
+   Pages URL) so the blog recap section can link straight to your Insights
+   page. If you leave it blank, the recap just mentions the post by title
+   without a link.
+
+## Stage 4 — Cost controls
+
+- **`MAX_MENTIONS_PER_RUN`** (default 15) caps how many new newsletter
+  blurbs get drafted in one run — the blog recap section isn't capped
+  separately since it only ever includes posts Stage 3 already published,
+  which is inherently a small, human-gated number.
+- Uses one Claude call per new mention (default `claude-sonnet-5`,
+  overridable via `NEWSLETTER_MODEL`) — no separate cheap triage pass,
+  since Stage 2 already did that work when it decided something was a
+  "Newsletter Candidate" in the first place.
+
+## Stage 4 — Triggering a run manually (to test it)
+
+Same pattern as the other stages: **Actions** tab → **Weekly Newsletter**
+in the sidebar → **Run workflow**. If there's nothing new to include,
+you'll see:
+
+```
+Nothing new for this week's newsletter — nothing to do. Exiting cleanly.
+```
+
+Otherwise, watch for a line like:
+
+```
+Found 1 blog post(s) to recap and 2 new newsletter mention(s) to draft (cap 15).
+```
+
+Then check: Airtable should show a new Weekly Newsletters row (Status
+"Needs Review") linked to the relevant Drafts, and your Buttondown
+account should show a new draft email under its Drafts tab.
+
+## Stage 4 — Known limitation
+
+The blog recap links to your site's general Insights page, not the exact
+new post's URL — the automation never persists the exact filename Stage 3
+generates for a published post anywhere in Airtable, so there's nothing
+precise to link to yet. This is fine in practice (the post is right at the
+top of the Insights listing), but if you'd like an exact deep link instead,
+that would mean having Stage 3 write the generated filename/URL back to
+the Draft record for Stage 4 to read later — a reasonable small
+enhancement if it bothers you.
+
 ## Known source issues (see Airtable Sources table for details)
 
 A few of the feeds you asked to add aren't fully working yet — they're
@@ -344,12 +445,16 @@ Airtable — no code change needed.
 
 ## What's next
 
-Stages 1, 2, and 3 of 4 are built. Still to come (tracked in the Claude
-Project doc):
+All four planned stages are built. The Editorial OS is now a complete
+loop: sources are monitored daily, candidates are scored and drafted,
+approved drafts become live pages through a PR you merge, and a weekly
+newsletter draft is compiled automatically for you to review and send.
+Nothing at any stage reaches your site or your subscribers' inboxes
+without you taking an explicit action first (merging a PR, clicking Send
+in Buttondown).
 
-- **Stage 4 — Weekly Afrinex newsletter.** Pulls the week's approved items
-  into a Buttondown draft with a placeholder for your own Editor's Note,
-  ready every Monday for you to review before sending.
-
-Stage 4 will need one more account/API key (Buttondown), added the same way
-as above — as a GitHub repo secret, never committed to the repo.
+Possible future refinements (not required, just ideas):
+- Persist each published post's exact filename/URL so Stage 4's blog
+  recap can link directly to it instead of the general Insights page.
+- Build the PubMed saved-search RSS feeds noted in "Known source issues"
+  below, to bring the blocked/needs-follow-up sources online.
