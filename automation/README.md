@@ -328,6 +328,18 @@ quietly does nothing (this happened once already; see git history around
 `PATCH`) calls are unaffected — they already accept field IDs as input keys
 regardless of this parameter.
 
+**If you're calling Claude's Messages API in these scripts**: never assume
+`content[0]` is the text block in the response. In practice, calls to
+`claude-sonnet-5` have come back with a `"thinking"` block first (even
+without deliberately enabling extended thinking) and the actual JSON text
+in a later block — a naive `payload["content"][0]["text"]` read breaks on
+that shape with a `KeyError`, logged as "Unexpected Claude response
+shape." Both `relevance_scorer.py` and `weekly_newsletter.py` instead scan
+every block in `content` and concatenate whichever ones have
+`"type": "text"`, which is safe regardless of what other block types show
+up before or after it. (Found and fixed 2026-09-09, during Stage 4's
+rollout — see git history if you want the full story.)
+
 ## Stage 4 — Weekly Newsletter: how it works
 
 Once a week, this stage compiles a **draft** email for the Afrinex

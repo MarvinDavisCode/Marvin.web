@@ -298,7 +298,18 @@ def _call_claude(model, system_prompt, user_prompt, max_tokens):
 
     try:
         payload = resp.json()
-        return payload["content"][0]["text"]
+        # Don't assume content[0] is the text block — the API can put a
+        # "thinking" block first (seen in practice with claude-sonnet-5,
+        # even without opting into extended thinking), which would silently
+        # break a naive content[0]["text"] read. Concatenate every "text"
+        # block instead, wherever it falls in the list.
+        content_blocks = payload.get("content", [])
+        text = "".join(
+            block.get("text", "") for block in content_blocks if block.get("type") == "text"
+        )
+        if not text:
+            raise ValueError("no text content block in response")
+        return text
     except (KeyError, IndexError, ValueError) as exc:
         log.error("Unexpected Claude response shape: %s | body: %s", exc, resp.text[:500])
         return None
