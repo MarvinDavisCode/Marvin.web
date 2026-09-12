@@ -328,6 +328,23 @@ quietly does nothing (this happened once already; see git history around
 `PATCH`) calls are unaffected — they already accept field IDs as input keys
 regardless of this parameter.
 
+**If you rename or add a Taxonomy entry** (Airtable → Taxonomy table): go
+ahead — `relevance_scorer.py` reads the Taxonomy table's Name/Description
+fresh on every run and uses whatever's there, both to prompt Claude and to
+validate what it comes back with. You don't need to touch any script.
+The one thing that used to be fragile: writing a brand-new Taxonomy name
+onto a Candidate or Draft's Focus Areas field would fail if that exact
+option didn't already exist as a choice on that field. `update_candidate()`
+and both `create_draft()` functions (in `relevance_scorer.py` and
+`weekly_newsletter.py`) now pass `typecast: true` on every write, so
+Airtable auto-creates the choice instead of rejecting the whole update —
+including the Status change bundled into the same call, which is what made
+this failure mode nasty (a Candidate would silently get stuck on "New" and
+re-scored, and re-billed, on every future run). (Fixed 2026-09-12, when the
+Taxonomy was realigned from the site's old "Focus Areas" wording to its
+current "Professional Interests" — see git history if you want the full
+story.)
+
 **If you're calling Claude's Messages API in these scripts**: never assume
 `content[0]` is the text block in the response. In practice, calls to
 `claude-sonnet-5` have come back with a `"thinking"` block first (even

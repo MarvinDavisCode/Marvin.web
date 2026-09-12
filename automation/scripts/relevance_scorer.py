@@ -260,7 +260,18 @@ def fetch_new_candidates(limit):
 
 def update_candidate(record_id, fields):
     url = f"{AIRTABLE_API_ROOT}/{BASE_ID}/{CANDIDATES_TABLE}/{record_id}"
-    resp = _request_with_retry("PATCH", url, headers=_airtable_headers(), json={"fields": fields})
+    # typecast=True matters here specifically for the Focus Areas
+    # (multipleSelects) field: focus_areas values come straight from the
+    # Taxonomy table (via valid_focus_areas), which Marvin can rename/edit
+    # independently of this field's pre-existing choice list. Without
+    # typecast, writing a Taxonomy name that isn't yet a choice on this
+    # field fails the whole PATCH (400/422) — including the Status change
+    # bundled in the same call — leaving the Candidate stuck as "New" and
+    # re-scored forever. typecast=True lets Airtable auto-create the choice
+    # instead.
+    resp = _request_with_retry(
+        "PATCH", url, headers=_airtable_headers(), json={"fields": fields, "typecast": True},
+    )
     if resp is None or resp.status_code != 200:
         log.error("Failed to update Candidate %s: %s", record_id, getattr(resp, "text", "no response")[:300])
         return False
@@ -269,7 +280,12 @@ def update_candidate(record_id, fields):
 
 def create_draft(fields):
     url = f"{AIRTABLE_API_ROOT}/{BASE_ID}/{DRAFTS_TABLE}"
-    resp = _request_with_retry("POST", url, headers=_airtable_headers(), json={"records": [{"fields": fields}]})
+    # See the comment in update_candidate() above — same reasoning applies
+    # to this Draft's own Focus Areas field.
+    resp = _request_with_retry(
+        "POST", url, headers=_airtable_headers(),
+        json={"records": [{"fields": fields}], "typecast": True},
+    )
     if resp is None or resp.status_code not in (200, 201):
         log.error("Failed to create Draft: %s", getattr(resp, "text", "no response")[:300])
         return None
@@ -334,10 +350,11 @@ def _parse_json_response(raw_text):
         return None
 
 
-SCORING_SYSTEM_PROMPT_TEMPLATE = """You are triaging incoming articles for Marvin Darvis's editorial system. \
-Marvin is a psychologist and Mental Health & Behavioral Health Innovation Specialist. His audience is \
+SCORING_SYSTEM_PROMPT_TEMPLATE = """You are triaging incoming articles for Marvin Davis Odhiambo's editorial \
+system. Marvin is a psychologist, Founder of Afrinex, and Behavioral Health Innovator. His audience is \
 practitioners, educators, researchers, and program teams working in evidence-based mental health practice, \
-AI in mental health, implementation science, and (often) resource-constrained settings including Africa/Kenya.
+AI in mental health, implementation science, clinical and cognitive neuroscience, and human-centered, \
+scalable mental health innovation, and (often) resource-constrained settings including Africa/Kenya.
 
 His site's focus areas are:
 {taxonomy_block}
@@ -355,10 +372,11 @@ Respond with ONLY a single JSON object with exactly these keys: relevance_score,
 reasoning. No markdown formatting, no code fences, no extra commentary before or after the JSON."""
 
 
-DRAFTING_SYSTEM_PROMPT = """You are drafting a blog post for Marvin Darvis's professional website, in his voice: \
-a psychologist and Mental Health & Behavioral Health Innovation Specialist writing for practitioners, educators, \
-researchers, and program teams. His tone is evidence-based, measured, and practical, and he never overclaims — \
-he is a licensed mental health professional publishing under his own name, so accuracy matters more than excitement.
+DRAFTING_SYSTEM_PROMPT = """You are drafting a blog post for Marvin Davis Odhiambo's professional website, in \
+his voice: a psychologist, Founder of Afrinex, and Behavioral Health Innovator writing for practitioners, \
+educators, researchers, and program teams. His tone is evidence-based, measured, and practical, and he never \
+overclaims — he is a licensed mental health professional publishing under his own name, so accuracy matters \
+more than excitement.
 
 Ground rules — follow these strictly:
 - Base the post ONLY on the title, source, and summary given below. Do not invent statistics, quotes, study \

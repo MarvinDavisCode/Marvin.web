@@ -272,7 +272,14 @@ def fetch_drafts_for_dedup():
 
 def create_draft(fields):
     url = f"{AIRTABLE_API_ROOT}/{BASE_ID}/{DRAFTS_TABLE}"
-    resp = _request_with_retry("POST", url, headers=_airtable_headers(), json={"records": [{"fields": fields}]})
+    # typecast=True: this Draft's Focus Areas value is copied straight from
+    # the source Candidate, which may carry a Taxonomy-derived tag name that
+    # isn't yet a choice on this field (e.g. right after Marvin renames/adds
+    # a Taxonomy entry) — without typecast the whole write would fail.
+    resp = _request_with_retry(
+        "POST", url, headers=_airtable_headers(),
+        json={"records": [{"fields": fields}], "typecast": True},
+    )
     if resp is None or resp.status_code not in (200, 201):
         log.error("Failed to create newsletter Draft: %s", getattr(resp, "text", "no response")[:300])
         return None
@@ -281,7 +288,10 @@ def create_draft(fields):
 
 def create_weekly_newsletter(fields):
     url = f"{AIRTABLE_API_ROOT}/{BASE_ID}/{NEWSLETTERS_TABLE}"
-    resp = _request_with_retry("POST", url, headers=_airtable_headers(), json={"records": [{"fields": fields}]})
+    resp = _request_with_retry(
+        "POST", url, headers=_airtable_headers(),
+        json={"records": [{"fields": fields}], "typecast": True},
+    )
     if resp is None or resp.status_code not in (200, 201):
         log.error("Failed to create Weekly Newsletter row: %s", getattr(resp, "text", "no response")[:300])
         return None
@@ -292,10 +302,11 @@ def create_weekly_newsletter(fields):
 # Claude call — write one short newsletter blurb
 # --------------------------------------------------------------------------
 
-BLURB_SYSTEM_PROMPT = """You are writing a short newsletter mention for Marvin Darvis's weekly \
-Afrinex newsletter. Marvin is a psychologist and Mental Health & Behavioral Health Innovation \
-Specialist; his audience is practitioners, educators, researchers, and program teams working in \
-evidence-based mental health practice, AI in mental health, implementation science, and (often) \
+BLURB_SYSTEM_PROMPT = """You are writing a short newsletter mention for Marvin Davis Odhiambo's weekly \
+Afrinex community newsletter. Marvin is a psychologist, Founder of Afrinex, and Behavioral Health \
+Innovator; his audience is practitioners, educators, researchers, and program teams working in \
+evidence-based mental health practice, AI in mental health, implementation science, clinical and \
+cognitive neuroscience, and human-centered, scalable mental health innovation, and (often) \
 resource-constrained settings including Africa/Kenya.
 
 This item was already judged relevant enough for a brief mention (not a full blog post). Write a \
