@@ -1,0 +1,46 @@
+name: On-Publish Notify
+
+# Stage 3.5 of the Editorial OS: fires on every push to main (i.e. whenever
+# a Publish Approved Drafts PR is merged). Checks every Draft/Weekly
+# Newsletters row that has a GitHub PR URL but no "Live At" date yet,
+# confirms via the GitHub API whether that PR is actually merged, and if
+# so reads the real published page, asks Claude to draft a LinkedIn and a
+# Facebook version of it, and writes Published URL / Live At / LinkedIn
+# Post / Facebook Post back to Airtable. Writing "Live At" is what fires
+# Airtable's own automation that emails Marvin the live link plus both
+# social drafts — nothing here sends an email itself, and nothing here
+# posts to LinkedIn or Facebook automatically. See automation/README.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r automation/requirements.txt
+
+      - name: Run on-publish notify
+        env:
+          AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+          AIRTABLE_BASE_ID: appGoegWQtI3TmtNW
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          # Repository variable (Settings -> Secrets and variables -> Actions
+          # -> Variables tab, not Secrets), e.g. "https://marvindarvis.com/".
+          # Used to build the live Published URL. Leave unset and Published
+          # URL stays blank (Live At is still set, so the email still fires).
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
+        run: python automation/scripts/on_publish_notify.py

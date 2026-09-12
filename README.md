@@ -22,19 +22,21 @@ marvin-site/
 ├── assets/
 │   ├── marvin-headshot.jpg   Photo used on About + Home hero
 │   └── afrinex-logo.png      Afrinex brand mark, used on community.html + afrinex.html
-├── automation/          Editorial OS: source monitor, scoring, publishing, newsletter
+├── automation/          Editorial OS: source monitor, scoring, publishing, Afrinex issues
 │   ├── README.md            Setup guide — start here
 │   ├── requirements.txt
 │   └── scripts/
 │       ├── source_monitor.py       Stage 1: RSS feeds -> Candidates
 │       ├── relevance_scorer.py     Stage 2: Candidates -> scored + Drafts
-│       ├── publish_approved.py     Stage 3: Approved Drafts -> PR
-│       └── weekly_newsletter.py    Stage 4: weekly recap -> Buttondown draft
+│       ├── publish_approved.py     Stage 3: Approved Drafts/issues -> PR
+│       ├── on_publish_notify.py    Stage 3.5: confirms live -> LinkedIn/FB drafts -> email
+│       └── weekly_newsletter.py    Stage 4: weekly recap -> Afrinex issue for review
 └── .github/workflows/
     ├── source-monitor.yml      Daily scheduled run of the source monitor
     ├── relevance-scorer.yml    Daily scheduled run of the relevance scorer
     ├── publish-approved.yml    Runs every 6 hours, opens PRs for approvals
-    └── weekly-newsletter.yml   Mondays, compiles a Buttondown newsletter draft
+    ├── on-publish.yml          Runs on every push to main (i.e. on merge)
+    └── weekly-newsletter.yml   Mondays, compiles the next Afrinex issue for review
 ```
 
 Every page shares the same header/footer markup and the same `css/style.css` and
@@ -140,18 +142,23 @@ at them — their docs walk through the exact records to add.
 
 ## Editorial OS automation
 
-`automation/` and `.github/workflows/` together are the full 4-stage
+`automation/` and `.github/workflows/` together are the full 5-stage
 automated content pipeline: GitHub Actions that check your Airtable Sources
 for new articles, score them against your Focus Areas with Claude, write
 full drafts for the promising ones into Airtable's Drafts table for your
-review, turn approved ones into real pages on the site via a pull request
-you merge yourself, and — once a week — compile a Buttondown draft
-recapping what's new for the Afrinex newsletter, ready for you to add your
-own Editor's Note and send. Nothing reaches the live site or your
-subscribers' inboxes without you taking an explicit action first (merging
-a PR, clicking Send in Buttondown). See `automation/README.md` for the
-one-time setup (Airtable, Anthropic, and Buttondown, all added as GitHub
-secrets) and full details on how each stage works.
+review, turn approved drafts *and* approved Afrinex issues into real pages
+on the site via a pull request you merge yourself, and then — once you've
+merged that PR — confirm it's live, draft a LinkedIn and a Facebook version
+of it, and email them to you to review and post yourself. Afrinex itself
+is now a weekly issue published on the site (not an emailed newsletter),
+compiled automatically each week into an Airtable row for your review and
+approval, then published the same PR-gated way as a blog post. Nothing
+reaches the live site, your inbox, or any social platform without you
+taking an explicit action first (approving something in Airtable, merging
+a PR, or posting to LinkedIn/Facebook yourself). See `automation/README.md`
+for the one-time setup (Airtable and Anthropic API keys as GitHub secrets,
+a `SITE_BASE_URL` repository variable, and turning on two Airtable
+automations) and full details on how each stage works.
 
 ## Accessibility & performance notes
 

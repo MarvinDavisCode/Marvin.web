@@ -78,6 +78,14 @@ title/heading/body, then link to it from `insights.html` (and optionally
 add a short teaser card to the "Writing/Publications" section on
 `index.html` too, following the existing `.post-card` pattern).
 
+Note: blog posts and Afrinex issues can also be published automatically by
+the Editorial OS once you approve them in Airtable — see
+`automation/README.md`. Either way, once your first real Afrinex issue is
+published automatically, delete the "Coming soon" placeholder card from
+`afrinex.html`'s "Latest issues" section by hand (search for `Coming soon`
+to find it) — the automation only ever adds new cards, it doesn't remove
+that placeholder for you.
+
 ### 6. Add your real social links
 Every placeholder link looks like:
 ```html

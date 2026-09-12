@@ -3,29 +3,36 @@
 Weekly Newsletter — Editorial OS, Stage 4
 ===========================================
 
-Once a week, compiles a Buttondown DRAFT (never sent automatically) for the
-Afrinex newsletter, made up of:
+Once a week, compiles the content for the next Afrinex issue — published on
+the site's Afrinex section (not emailed) once Marvin approves it — made up
+of:
 
   1. "This week on the blog" — Drafts with Target "Blog" that already have a
      GitHub PR URL (i.e. Stage 3 has published or opened a PR for them) and
-     haven't been recapped in a previous newsletter yet.
+     haven't been recapped in a previous issue yet.
   2. "Worth a quick read" — Candidates with Status "Newsletter Candidate"
      (Stage 2's "relevant, but not a full post" verdict) that haven't been
-     turned into a newsletter blurb yet. Each gets a short (2-3 sentence)
-     blurb written by Claude, strictly from the Candidate's own title/
-     source/summary — same no-invented-facts rule as Stage 2's blog drafts.
+     turned into a blurb yet. Each gets a short (2-3 sentence) blurb written
+     by Claude, strictly from the Candidate's own title/source/summary —
+     same no-invented-facts rule as Stage 2's blog drafts.
 
 Every included item becomes (or already is) a row in the Drafts table, and
 all of them get linked from one new Weekly Newsletters row for the week.
-The compiled email includes an explicit placeholder for Marvin's own
-Editor's Note. Nothing is ever sent — the Buttondown draft sits there for
-Marvin to open, edit, and send himself. Nothing in Airtable's Drafts/
-Candidates data is ever emailed without going through this human step.
+The full compiled text is written into that row's "Compiled Body" field —
+for Marvin to read, add his own Editor's Note to (in the Editor's Note
+field), and then move to Status "Approved" himself. Nothing goes anywhere
+near the live site until he does that; a separate script (part of Stage 3,
+publish_approved.py) is what actually turns an Approved issue into a real
+page once he's approved it, the same way an Approved Draft becomes a blog
+post.
+
+This script no longer sends or drafts anything in an email service — the
+Afrinex "newsletter" is now a page on the site, not an email. See
+automation/README.md for the full Stage 3/4 flow.
 
 Environment variables required:
     AIRTABLE_PAT          Airtable Personal Access Token (repo secret)
     ANTHROPIC_API_KEY     Anthropic API key (repo secret)
-    BUTTONDOWN_API_KEY    Buttondown API key (repo secret)
 
 Optional environment variables:
     AIRTABLE_BASE_ID       Airtable base ID (default: the live base)
@@ -58,7 +65,6 @@ import requests
 BASE_ID = os.environ.get("AIRTABLE_BASE_ID", "appGoegWQtI3TmtNW")
 AIRTABLE_PAT = os.environ.get("AIRTABLE_PAT")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-BUTTONDOWN_API_KEY = os.environ.get("BUTTONDOWN_API_KEY")
 
 NEWSLETTER_MODEL = os.environ.get("NEWSLETTER_MODEL", "claude-sonnet-5")
 MAX_MENTIONS_PER_RUN = int(os.environ.get("MAX_MENTIONS_PER_RUN", "15"))
@@ -107,20 +113,20 @@ NEWS_FIELD_THEME = "fldJQ2UcIxo1GzNMJ"
 NEWS_FIELD_INCLUDED_DRAFTS = "fldEjhrKi01f6M9MV"      # link -> Drafts
 NEWS_FIELD_EDITORS_NOTE = "fldOR3U3GiL4sf1BJ"
 NEWS_FIELD_STATUS = "fld77FwNlvdgiC0Rt"
-NEWS_FIELD_BUTTONDOWN_URL = "fldeszztf5GVvCttN"
+NEWS_FIELD_COMPILED_BODY = "fldOMrGQaLmA65ZOX"         # full issue text, for Marvin's review
 
 NEWS_STATUS_NEEDS_REVIEW = "Needs Review"
 
 EDITORS_NOTE_PLACEHOLDER = (
-    "[Editor's note — add your own take on the week before sending. This "
-    "line is just a placeholder; replace it in Buttondown or in this "
-    "Weekly Newsletter row's Editor's Note field.]"
+    "[Editor's note — add your own take on the week before approving this "
+    "for publish. This line is just a placeholder; replace it in this "
+    "Weekly Newsletter row's Editor's Note field, then set Status to "
+    "'Approved' when you're ready for it to go live on the Afrinex page.]"
 )
 
 AIRTABLE_API_ROOT = "https://api.airtable.com/v0"
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
-BUTTONDOWN_API_URL = "https://api.buttondown.email/v1/emails"
 
 PAGE_SIZE = 100
 REQUEST_TIMEOUT = 30
@@ -135,7 +141,7 @@ log = logging.getLogger("weekly_newsletter")
 
 
 # --------------------------------------------------------------------------
-# HTTP helpers — shared retry/backoff wrapper for Airtable, Anthropic, Buttondown
+# HTTP helpers — shared retry/backoff wrapper for Airtable + Anthropic
 # --------------------------------------------------------------------------
 
 def _request_with_retry(method, url, **kwargs):
@@ -176,13 +182,6 @@ def _anthropic_headers():
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": ANTHROPIC_VERSION,
         "content-type": "application/json",
-    }
-
-
-def _buttondown_headers():
-    return {
-        "Authorization": f"Token {BUTTONDOWN_API_KEY}",
-        "Content-Type": "application/json",
     }
 
 
@@ -302,18 +301,18 @@ def create_weekly_newsletter(fields):
 # Claude call — write one short newsletter blurb
 # --------------------------------------------------------------------------
 
-BLURB_SYSTEM_PROMPT = """You are writing a short newsletter mention for Marvin Davis Odhiambo's weekly \
-Afrinex community newsletter. Marvin is a psychologist, Founder of Afrinex, and Behavioral Health \
-Innovator; his audience is practitioners, educators, researchers, and program teams working in \
-evidence-based mental health practice, AI in mental health, implementation science, clinical and \
-cognitive neuroscience, and human-centered, scalable mental health innovation, and (often) \
-resource-constrained settings including Africa/Kenya.
+BLURB_SYSTEM_PROMPT = """You are writing a short mention for Marvin Davis Odhiambo's weekly \
+Afrinex community issue, published on his site. Marvin is a psychologist, Founder of Afrinex, \
+and Behavioral Health Innovator; his audience is practitioners, educators, researchers, and \
+program teams working in evidence-based mental health practice, AI in mental health, \
+implementation science, clinical and cognitive neuroscience, and human-centered, scalable \
+mental health innovation, and (often) resource-constrained settings including Africa/Kenya.
 
 This item was already judged relevant enough for a brief mention (not a full blog post). Write a \
-short newsletter blurb about it.
+short mention about it.
 
 Ground rules — follow these strictly:
-- Base the blurb ONLY on the title, source, and summary given below. Do not invent statistics, \
+- Base the mention ONLY on the title, source, and summary given below. Do not invent statistics, \
 quotes, study findings, or any specific detail that isn't present in that material.
 - Length: 2-3 short sentences. No headers, no markdown formatting.
 - Tone: grounded, plain-spoken, practical — matching a licensed mental health professional writing \
@@ -324,7 +323,7 @@ actually shows.
 Respond with ONLY a single JSON object with exactly these keys:
 - blurb_title: a short label for this mention (under 70 characters)
 - blurb: the 2-3 sentence mention itself, plain text
-- editorial_notes: anything Marvin should double check before sending, or "None" if nothing stands out
+- editorial_notes: anything Marvin should double check before approving this for publish, or "None" if nothing stands out
 
 No markdown formatting, no code fences, no extra commentary before or after the JSON."""
 
@@ -396,7 +395,7 @@ def write_blurb(candidate_text):
 
 def process_candidate_mention(rec, sources_map):
     """Writes a blurb for one Newsletter Candidate and creates its Draft
-    row. Returns a dict with everything needed for the compiled email, or
+    row. Returns a dict with everything needed for the compiled issue, or
     None if this candidate couldn't be processed this run (it stays
     uncovered and will be picked up automatically on a future run)."""
     fields = rec.get("fields", {})
@@ -444,13 +443,13 @@ def process_candidate_mention(rec, sources_map):
 
 
 # --------------------------------------------------------------------------
-# Email compilation
+# Issue compilation
 # --------------------------------------------------------------------------
 
-def compile_email_body(week_of, recap_items, mention_items):
+def compile_issue_body(week_of, recap_items, mention_items):
+    """Builds the full text of this week's Afrinex issue. This is what gets
+    published as the on-site page once Marvin approves it — not emailed."""
     lines = []
-    lines.append(f"Afrinex — Week of {week_of}")
-    lines.append("")
     lines.append(EDITORS_NOTE_PLACEHOLDER)
     lines.append("")
 
@@ -475,46 +474,10 @@ def compile_email_body(week_of, recap_items, mention_items):
 
     lines.append("---")
     lines.append(
-        "This draft was AI-assisted from published sources and reviewed by Marvin before sending."
+        "This issue was AI-assisted from published sources and reviewed by Marvin before publishing."
     )
 
     return "\n".join(lines)
-
-
-def push_buttondown_draft(subject, body):
-    """Creates a DRAFT email in Buttondown — never sent automatically.
-    Returns (buttondown_url_or_none, raw_response_dict_or_none)."""
-    resp = _request_with_retry(
-        "POST", BUTTONDOWN_API_URL, headers=_buttondown_headers(),
-        json={"subject": subject, "body": body, "status": "draft"},
-    )
-    if resp is None or resp.status_code not in (200, 201):
-        log.error("Failed to create Buttondown draft: %s", getattr(resp, "text", "no response")[:500])
-        return None, None
-
-    try:
-        payload = resp.json()
-    except ValueError:
-        log.error("Buttondown returned a non-JSON response: %s", resp.text[:500])
-        return None, None
-
-    log.info("Buttondown draft created. Raw response: %s", json.dumps(payload)[:500])
-
-    # Buttondown's response shape for the editable web URL isn't something
-    # this script assumes with confidence — check a couple of plausible
-    # keys, and fall back to telling Marvin to check the dashboard directly
-    # rather than ever writing a guessed, possibly-wrong URL into Airtable.
-    for key in ("absolute_url", "url", "web_url"):
-        if payload.get(key):
-            return payload[key], payload
-
-    email_id = payload.get("id")
-    if email_id:
-        log.info(
-            "Buttondown didn't return a direct URL in this API response (id: %s) — "
-            "open your Buttondown dashboard's Drafts tab to find and edit it.", email_id,
-        )
-    return None, payload
 
 
 # --------------------------------------------------------------------------
@@ -528,14 +491,11 @@ def main():
     if not ANTHROPIC_API_KEY:
         log.error("ANTHROPIC_API_KEY is not set — add it as a GitHub repo secret.")
         sys.exit(1)
-    if not BUTTONDOWN_API_KEY:
-        log.error("BUTTONDOWN_API_KEY is not set — add it as a GitHub repo secret.")
-        sys.exit(1)
 
     today = datetime.now(timezone.utc).date()
     week_of = (today - timedelta(days=today.weekday())).isoformat()  # Monday of this week
 
-    log.info("Weekly newsletter starting (model: %s, week of: %s, cap: %d)",
+    log.info("Weekly newsletter compiler starting (model: %s, week of: %s, cap: %d)",
               NEWSLETTER_MODEL, week_of, MAX_MENTIONS_PER_RUN)
 
     covered_candidate_ids, recap_blog_drafts = fetch_drafts_for_dedup()
@@ -546,11 +506,11 @@ def main():
     ][:MAX_MENTIONS_PER_RUN]
 
     if not recap_blog_drafts and not new_mention_candidates:
-        log.info("Nothing new for this week's newsletter — nothing to do. Exiting cleanly.")
+        log.info("Nothing new for this week's issue — nothing to do. Exiting cleanly.")
         return
 
     log.info(
-        "Found %d blog post(s) to recap and %d new newsletter mention(s) to draft (cap %d).",
+        "Found %d blog post(s) to recap and %d new mention(s) to draft (cap %d).",
         len(recap_blog_drafts), len(new_mention_candidates), MAX_MENTIONS_PER_RUN,
     )
 
@@ -584,22 +544,18 @@ def main():
             mentions_failed += 1
 
     if not included_draft_ids:
-        log.info("Nothing could be drafted this run (see warnings above) — skipping newsletter creation.")
+        log.info("Nothing could be drafted this run (see warnings above) — skipping issue creation.")
         return
 
-    email_subject = f"Afrinex — Week of {week_of}"
-    email_body = compile_email_body(week_of, recap_items, mention_items)
-
-    buttondown_url, _raw = push_buttondown_draft(email_subject, email_body)
+    issue_body = compile_issue_body(week_of, recap_items, mention_items)
 
     newsletter_fields = {
         NEWS_FIELD_WEEK_OF: week_of,
         NEWS_FIELD_INCLUDED_DRAFTS: included_draft_ids,
         NEWS_FIELD_EDITORS_NOTE: "",
         NEWS_FIELD_STATUS: NEWS_STATUS_NEEDS_REVIEW,
+        NEWS_FIELD_COMPILED_BODY: issue_body,
     }
-    if buttondown_url:
-        newsletter_fields[NEWS_FIELD_BUTTONDOWN_URL] = buttondown_url
 
     newsletter_id = create_weekly_newsletter(newsletter_fields)
 
@@ -610,11 +566,11 @@ def main():
             "drafted, %d mention(s) failed and will retry next run.",
             week_of, len(recap_items), mentions_drafted, mentions_failed,
         )
-        if buttondown_url:
-            log.info("Buttondown draft: %s", buttondown_url)
-        else:
-            log.info("Buttondown draft URL not available in the API response — check your Buttondown "
-                      "dashboard's Drafts tab directly.")
+        log.info(
+            "Nothing is published yet — read the Compiled Body field in Airtable, add an Editor's "
+            "Note if you want one, and set Status to 'Approved' when ready. The publish-approved "
+            "workflow will then turn it into a real page on the Afrinex section and open a PR."
+        )
     else:
         log.error(
             "Weekly Newsletter row failed to save, even though %d Draft(s) were created — those "

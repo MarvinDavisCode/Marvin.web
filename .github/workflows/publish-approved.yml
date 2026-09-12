@@ -1,11 +1,12 @@
 name: Publish Approved Drafts
 
-# Stage 3 of the Editorial OS: watches Airtable's Drafts table for rows
-# Marvin has marked Status "Approved" (Target "Blog"), turns each into a
-# real insight-post HTML file plus a matching teaser card on insights.html,
-# and opens ONE pull request with everything found this run. Never commits
-# straight to main — nothing reaches the live site until Marvin reviews
-# and merges the PR himself. See automation/README.md.
+# Stage 3 of the Editorial OS: watches Airtable for two things Marvin has
+# marked Status "Approved" — Drafts (Target "Blog") and Weekly Newsletters
+# rows (the next Afrinex issue) — turns each into a real HTML page (plus a
+# matching teaser card on insights.html or afrinex.html), and opens ONE
+# pull request with everything found this run. Never commits straight to
+# main — nothing reaches the live site until Marvin reviews and merges the
+# PR himself. See automation/README.md.
 
 on:
   schedule:

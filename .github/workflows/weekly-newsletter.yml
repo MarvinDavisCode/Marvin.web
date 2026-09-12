@@ -1,13 +1,14 @@
 name: Weekly Newsletter
 
-# Stage 4 of the Editorial OS: once a week, compiles a Buttondown DRAFT
-# (never sent automatically) for the Afrinex newsletter — a recap of any
-# blog post(s) published/PR'd this week, plus a short AI-written blurb for
-# each Candidate Stage 2 flagged as a "Newsletter Candidate" but not a full
-# post. Every included item is saved as a Drafts row and linked from a new
-# Weekly Newsletters row. Nothing is ever emailed — Marvin reviews, adds
-# his own Editor's Note, and sends it himself from Buttondown. See
-# automation/README.md.
+# Stage 4 of the Editorial OS: once a week, compiles the content for the
+# next Afrinex issue — a recap of any blog post(s) published/PR'd this
+# week, plus a short AI-written blurb for each Candidate Stage 2 flagged as
+# a "Newsletter Candidate" but not a full post. Everything is written into
+# a new Weekly Newsletters row's "Compiled Body" field for Marvin to review
+# directly in Airtable. Nothing is published anywhere yet — once Marvin
+# adds an Editor's Note and sets that row's Status to "Approved", the
+# Publish Approved Drafts workflow turns it into a real page in the
+# Afrinex section of the site. See automation/README.md.
 
 on:
   schedule:
@@ -35,9 +36,10 @@ jobs:
           AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
           AIRTABLE_BASE_ID: appGoegWQtI3TmtNW
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
-          # Replace with your real site URL (no trailing content after the
-          # domain/path) so the newsletter's blog recap can link straight to
-          # your Insights page. Leave blank to mention posts without a link.
-          SITE_BASE_URL: ""
+          # Repository variable (Settings -> Secrets and variables -> Actions
+          # -> Variables tab, not Secrets — it isn't sensitive), e.g.
+          # "https://marvindarvis.com/". Used so the blog recap can link
+          # straight to the Insights page. Leave unset to mention posts
+          # without a link.
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
         run: python automation/scripts/weekly_newsletter.py

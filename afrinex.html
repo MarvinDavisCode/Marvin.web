@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Afrinex — A Weekly Newsletter by Marvin Davis Odhiambo</title>
-  <meta name="description" content="Afrinex is Marvin Davis Odhiambo's weekly newsletter on evidence-based, technology-enabled mental health care — for practitioners, educators, researchers, and program teams." />
+  <title>Afrinex — Marvin Davis Odhiambo's Weekly Community</title>
+  <meta name="description" content="Afrinex is Marvin Davis Odhiambo's weekly community and publication on evidence-based, technology-enabled mental health care — for practitioners, educators, researchers, and program teams." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -37,13 +37,14 @@
         <p><a class="read-more" href="community.html">← Back to Community</a></p>
         <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-top:12px;">
           <img src="assets/afrinex-logo.png" alt="Afrinex logo" style="width:64px; height:auto; border-radius:14px;">
-          <span class="eyebrow" style="margin-bottom:0;">Weekly Newsletter</span>
+          <span class="eyebrow" style="margin-bottom:0;">Weekly Community</span>
         </div>
         <h1 style="max-width:20ch; margin-top:16px;">Afrinex</h1>
         <p style="max-width:64ch; font-size:1.05rem;">
-          A weekly newsletter on evidence-based, technology-enabled mental health care —
+          A weekly publication on evidence-based, technology-enabled mental health care —
           written for practitioners, educators, researchers, and program teams working to
           expand access to effective support, including across resource-constrained settings.
+          Published right here every week — join below and I'll reach out directly.
         </p>
       </div>
     </section>
@@ -64,23 +65,38 @@
         <div>
           <h2>What you'll get</h2>
           <ul class="list-check">
-            <li>One weekly note on evidence-based practice and what's actually working</li>
+            <li>A weekly issue on evidence-based practice and what's actually working</li>
             <li>Honest takes on where AI helps in mental health care — and where it doesn't</li>
             <li>Lessons from training, program delivery, and referral systems in the field</li>
-            <li>Early access to new writing, resources, and the occasional event</li>
+            <li>A personal note from Marvin once you sign up — this is a community, not a list</li>
           </ul>
         </div>
       </div>
     </section>
 
+    <!-- ===================== LATEST ISSUES ===================== -->
+    <section>
+      <div class="container">
+        <h2>Latest issues</h2>
+        <div class="grid grid-3" id="afrinex-issues-grid">
+          <article class="post-card">
+            <span class="post-tag">Afrinex Issue</span>
+            <h3>Coming soon</h3>
+            <p>The first issue will appear here once it's published — join below to hear about it directly.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <!-- ===================== SIGNUP ===================== -->
-    <section class="section-alt">
+    <section class="section-alt" id="signup">
       <div class="container" style="max-width:560px;">
         <div class="form-card">
           <img src="assets/afrinex-logo.png" alt="" aria-hidden="true" style="width:44px; height:auto; margin:0 auto 16px; display:block;">
           <h2 class="mt-0 text-center">Join Afrinex</h2>
           <p class="text-center" style="margin-bottom:24px;">
-            One email a week. No spam, unsubscribe anytime.
+            Tell me a bit about yourself and I'll reach out personally — plus you'll be the
+            first to know when a new issue or post goes live.
           </p>
           <form action="https://formspree.io/f/your-form-id" method="POST" data-async>
             <div class="field">
@@ -103,13 +119,18 @@
                 <option value="other">Other</option>
               </select>
             </div>
+            <div class="field">
+              <label for="interest">What draws you to Afrinex? (optional)</label>
+              <textarea id="interest" name="interest" rows="2"></textarea>
+            </div>
             <button class="btn btn-primary btn-block" type="submit">Join Afrinex</button>
             <p class="form-status" role="status"></p>
           </form>
         </div>
         <div class="notice-box" style="margin-top:24px; margin-bottom:0;">
-          This form needs a real endpoint before it goes live — wire it up to Formspree,
-          Mailchimp, or ConvertKit. See README.md, "Wiring up the forms."
+          This form needs a real endpoint before it goes live — wire it up to Formspree. See
+          README.md, "Wiring up the forms." Each signup arrives in your inbox with the details
+          above — that's your list to reach out from personally.
         </div>
       </div>
     </section>

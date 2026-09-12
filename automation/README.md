@@ -1,27 +1,130 @@
 # Editorial OS — Automation
 
 This folder holds the automated content pipeline described in the Claude
-Project doc (`claude/editorial-automation-plan.md`). All four stages are
-live:
+Project doc (`claude/editorial-automation-plan.md`). As of 2026-09-12 this
+is a 5-stage pipeline — the newsletter now publishes to the site itself
+instead of emailing subscribers, and there's a new stage that notifies you
+with social drafts once something actually goes live:
 
 - **Stage 1 — Source Monitor**: checks your Airtable **Sources** table
   daily and drops any new articles into the **Candidates** table.
 - **Stage 2 — Relevance Scorer**: reads those Candidates, scores them
   against your Focus Areas using Claude, and writes a full draft into the
   **Drafts** table for the promising ones.
-- **Stage 3 — Publish Approved Drafts**: watches for Drafts you've marked
-  "Approved", turns each into a real page on the site, and opens a pull
-  request for you to merge — nothing goes live without that merge.
-- **Stage 4 — Weekly Newsletter**: once a week, compiles a Buttondown
-  *draft* (never sent automatically) recapping the week's published post(s)
-  plus short AI-written blurbs for anything Stage 2 flagged as a newsletter
-  mention — ready for you to add your Editor's Note and send yourself.
+- **Stage 3 — Publish Approved Drafts**: watches for Drafts (blog posts)
+  and Weekly Newsletters rows (Afrinex issues) you've marked "Approved",
+  turns each into a real page on the site, and opens a pull request for
+  you to merge — nothing goes live without that merge.
+- **Stage 3.5 — On-Publish Notify**: fires on every push to `main` (i.e.
+  when you merge a Stage 3 PR). Confirms what's now actually live, drafts a
+  LinkedIn and a Facebook version of it from the real published text, and
+  writes it all back to Airtable — which is what triggers an Airtable
+  automation that emails you the link and both drafts.
+- **Stage 4 — Weekly Newsletter (Afrinex issue compiler)**: once a week,
+  compiles the next Afrinex issue — a recap of the week's published
+  post(s) plus short AI-written blurbs for anything Stage 2 flagged as a
+  newsletter mention — into a Weekly Newsletters row for you to review
+  right there in Airtable. Nothing is emailed to subscribers; Afrinex is
+  now a page on your site, published the same deliberate, PR-gated way a
+  blog post is.
 
 Only Stage 3 ever touches the site itself, and even then only through a PR
-you review. Stage 4 only ever creates a *draft* email — nothing is ever
-sent without you opening Buttondown and clicking Send yourself. Every
-draft this pipeline produces sits in Airtable (or Buttondown) waiting for
-you to read, edit, approve, or send it.
+you review. Stage 3.5 only ever reads the live site and writes to
+Airtable — it doesn't touch the site or post to any social platform
+itself. Every draft this pipeline produces sits in Airtable waiting for
+you to read, edit, or approve it, and every social post it drafts sits in
+your inbox waiting for you to personally review and publish it.
+
+## How a piece of content moves through the whole pipeline
+
+For a blog post: **New candidate → scored → drafted (Needs Review) → you
+set Status "Approved" → Stage 3 opens a PR → you merge it → Stage 3.5
+confirms it's live, drafts LinkedIn/Facebook copy, emails you.**
+
+For an Afrinex issue: **Stage 4 compiles the week's content into a Weekly
+Newsletters row (Compiled Body, Status "Needs Review") → you read it in
+Airtable, optionally add an Editor's Note, and set Status "Approved" →
+Stage 3 renders it as a real `afrinex-issue-*.html` page and opens a PR →
+you merge it → Stage 3.5 confirms it's live, drafts LinkedIn/Facebook
+copy, emails you.**
+
+Notice Stage 3 and Stage 3.5 are shared machinery between blog posts and
+Afrinex issues — the same PR-then-merge gate, and the same "confirm it's
+live, then draft social copy" notification, apply to both.
+
+## End-to-end live test recipe (do this once, on your real repo)
+
+This walks through the *whole* pipeline in one sitting, on your real
+GitHub repo and Airtable base — the fastest way to prove the new
+site-publish + notify flow actually works before trusting the schedules.
+Each per-stage section below has its own "Triggering a run manually"
+instructions; this section just chains them in the right order with the
+specific checkpoints to look for. Budget about 15-20 minutes, most of it
+waiting for GitHub Actions runs (each takes 1-3 minutes).
+
+**0. One-time setup checklist** (skip anything already done):
+   - `AIRTABLE_PAT` and `ANTHROPIC_API_KEY` GitHub secrets are set (Stage 1
+     / Stage 2 setup above).
+   - **Settings → Actions → General → Workflow permissions** →  "Allow
+     GitHub Actions to create and approve pull requests" is checked (Stage
+     3 setup above) — otherwise the PR step below will 403.
+   - `SITE_BASE_URL` repository **variable** is set (Settings → Secrets
+     and variables → Actions → **Variables** tab) to your real site URL —
+     otherwise Published URL stays blank, but everything else still works.
+   - The two Airtable automations ("Notify Marvin — Blog post live" and
+     "Notify Marvin — Afrinex issue live") are switched **on** in your
+     base's Automations tab — otherwise you won't get the email at the end.
+
+**1. Test the blog-post half:**
+   1. In Airtable's **Drafts** table, either use a draft Stage 2 already
+      wrote, or duplicate any row for a disposable test — either way, set
+      its **Status** to `Approved` (leave Target as `Blog`).
+   2. Trigger **Publish Approved Drafts** manually (Actions tab). Watch the
+      log for `Rendered post: ... -> insight-*.html` and `Opened PR:
+      https://github.com/.../pull/N`.
+   3. Check Airtable: that Draft's **GitHub PR URL** and **Filename**
+      fields should now be filled in.
+   4. Open the PR on GitHub, glance at the "Files changed" tab (you should
+      see the new `insight-*.html` file and an updated `insights.html`
+      with a new teaser card), then **merge it**.
+   5. Merging pushes to `main`, which fires **On-Publish Notify**
+      automatically — you can watch it start under the Actions tab within
+      a few seconds. Watch its log for `... confirmed live, social drafts
+      written.`
+   6. Check Airtable: that Draft's **Live At**, **Published URL**,
+      **LinkedIn Post**, and **Facebook Post** fields should now be filled
+      in.
+   7. Check your email (marvindarvis@gmail.com) — you should get a message
+      from the "Notify Marvin — Blog post live" automation with the live
+      link and both drafts. If the fields filled in but no email arrived,
+      the automation is probably still switched off (see step 0).
+
+**2. Test the Afrinex-issue half** (same shape, different table):
+   1. Trigger **Weekly Newsletter** manually (Actions tab) to compile an
+      issue — or, if one already exists in **Weekly Newsletters** with
+      Status "Needs Review", reuse it.
+   2. Open that row in Airtable, read the **Compiled Body**, optionally
+      replace the Editor's Note placeholder with a real note, then set
+      **Status** to `Approved`.
+   3. Trigger **Publish Approved Drafts** again. Watch for `Rendered
+      issue: ... -> afrinex-issue-*.html` and a PR opening (it'll bundle
+      with any blog posts also awaiting publish, or open on its own).
+   4. Merge the PR, same as step 1.4 above.
+   5. **On-Publish Notify** fires again automatically — watch for the
+      issue's title confirmed live in the log.
+   6. Check Airtable and your email the same way as steps 1.6-1.7, this
+      time on the Weekly Newsletters row and the "Notify Marvin — Afrinex
+      issue live" automation.
+
+**3. Confirm on the live site:** visit your site's Afrinex page and
+Insights page and check the new post/issue actually renders correctly and
+the "Coming soon" placeholder card can be deleted from `afrinex.html` now
+that a real issue exists (see `CONTENT-GUIDE.md`).
+
+If every checkpoint above lands, the whole updated pipeline — generalized
+Stage 3, the new Stage 3.5, and the simplified Stage 4 — is confirmed
+working end to end on your real infrastructure, not just in a local
+mock-up.
 
 ## Stage 1 — Source Monitor: how it works
 
@@ -189,40 +292,49 @@ Drafts with Status "Needs Review".
 
 ## Stage 3 — Publish Approved Drafts: how it works
 
-This is the step that actually turns an approved draft into a real page on
+This is the step that actually turns something approved into a real page on
 your site — but it never does that unattended. It opens a pull request for
-you to review and merge; nothing reaches the live site on its own.
+you to review and merge; nothing reaches the live site on its own. It
+handles two kinds of content, side by side:
 
 1. `.github/workflows/publish-approved.yml` runs every 6 hours (cheap to
    check, and it means an approval you make in Airtable doesn't sit for a
    full day before something happens with it), plus `workflow_dispatch`.
 2. It runs `automation/scripts/publish_approved.py`, which:
-   - Looks in Drafts for rows where **Status = "Approved"**, **Target =
-     "Blog"**, and the **GitHub PR URL** field is still blank (see "Why a
-     PR, and how re-runs are prevented" below).
-   - For each one, generates a real `insight-*.html` page using the site's
+   - **Blog posts**: looks in Drafts for rows where **Status = "Approved"**,
+     **Target = "Blog"**, and the **GitHub PR URL** field is still blank.
+     For each one, generates a real `insight-*.html` page using the site's
      existing header/nav/footer markup, with the draft's Title, Subtitle,
      Body, SEO Title, and Meta Description filled in — plus a visible
      notice on the page itself disclosing that it was AI-drafted from
      published reporting and reviewed by Marvin before publishing, and a
      "Sources & References" section linking back to the original article.
-   - Adds a matching teaser card to the top of `insights.html`'s listing.
-   - Commits everything found in that run to **one new branch** and opens
-     **one pull request** — even if several drafts were approved at once —
-     so you review one PR instead of several, and so multiple posts never
-     collide trying to edit the same spot in `insights.html`.
-3. Once the PR is open, each included Draft's **GitHub PR URL** field is
-   filled in with a link straight to it — that's both a convenience (click
-   through from Airtable) and the mechanism that stops the same draft from
-   being bundled into a second PR next time this runs.
+     Adds a matching teaser card to the top of `insights.html`'s listing.
+   - **Afrinex issues**: looks in Weekly Newsletters for rows where
+     **Status = "Approved"** and **GitHub PR URL** is still blank. For each
+     one, generates a real `afrinex-issue-*.html` page from that row's
+     Compiled Body (with any Editor's Note you added shown as a highlighted
+     intro), and adds a matching teaser card to afrinex.html's "Latest
+     issues" list.
+   - Commits everything found in that run — blog posts and Afrinex issues
+     together — to **one new branch** and opens **one pull request**, so
+     you review one PR instead of several, and so multiple pieces never
+     collide trying to edit the same listing file.
+3. Once the PR is open, each included row's **GitHub PR URL** field (and
+   **Filename** field, recording exactly which file it became) is filled
+   in — that's both a convenience (click through from Airtable) and the
+   mechanism that stops the same item from being bundled into a second PR
+   next time this runs. The Filename is also what Stage 3.5 uses later to
+   find and read the real published file.
 4. **Review the PR like any other pull request** — click through to the
    "Files changed" tab, or check out the branch locally if you want to see
-   it rendered. Once you're happy, merge it — that's the moment the post
-   actually goes live via GitHub Pages.
-5. One bad draft (missing a linked Candidate, malformed content, whatever)
-   never blocks the others — it's logged and skipped, staying `Approved`
-   with a blank GitHub PR URL so it's picked up cleanly on a future run
-   once whatever was wrong is fixed.
+   it rendered. Once you're happy, merge it — that's the moment it actually
+   goes live via GitHub Pages, and the moment Stage 3.5 picks it up (see
+   below).
+5. One bad draft or issue (missing a linked Candidate, malformed content,
+   whatever) never blocks the others — it's logged and skipped, staying
+   `Approved` with a blank GitHub PR URL so it's picked up cleanly on a
+   future run once whatever was wrong is fixed.
 
 ### Why a PR, and how re-runs are prevented
 
@@ -232,12 +344,13 @@ checkpoint where you can preview the actual rendered page (spacing, line
 breaks, how a long title wraps) before it's live, and fix anything that
 only becomes obvious once it's laid out.
 
-Because of that, this script never touches the Status field — a Draft
-stays "Approved" forever, even after it's published. What it does track is
-the **GitHub PR URL** field: blank means "not picked up yet", filled in
-means "already has a PR". If you close a PR without merging it and want
-that draft re-picked-up from scratch, just clear its GitHub PR URL field in
-Airtable — the next run will treat it as new again.
+Because of that, this script never touches the Status field — a Draft or
+Weekly Newsletters row stays "Approved" forever, even after it's
+published. What it does track is the **GitHub PR URL** field: blank means
+"not picked up yet", filled in means "already has a PR". If you close a PR
+without merging it and want that item re-picked-up from scratch, clear its
+GitHub PR URL field (and Filename field) in Airtable — the next run will
+treat it as new again.
 
 ### If more than one PR is open at a time
 
@@ -288,7 +401,85 @@ To generate something to test with: open a Draft in Airtable, set its
 Status to `Approved` (it needs Target `Blog`, which is already the default
 for anything Stage 2 writes), then trigger a run. You should see a new
 branch and pull request appear on GitHub, and that Draft's GitHub PR URL
-field fill in with a link to it.
+and Filename fields fill in. Same idea for an Afrinex issue: set a Weekly
+Newsletters row's Status to `Approved` and trigger a run.
+
+## Stage 3.5 — On-Publish Notify: how it works
+
+This is the step that closes the loop Stage 3 can't close on its own —
+Stage 3 only opens a PR, so it has no way of knowing when (or whether) you
+actually merge it.
+
+1. `.github/workflows/on-publish.yml` runs on every push to `main` — which,
+   in this repo, only really happens when you merge one of Stage 3's PRs —
+   plus `workflow_dispatch`.
+2. It runs `automation/scripts/on_publish_notify.py`, which:
+   - Looks at every Draft and Weekly Newsletters row that has a **GitHub PR
+     URL** but no **Live At** date yet (i.e. published-a-PR-for but not yet
+     confirmed live).
+   - For each one, asks the GitHub API directly whether that PR is actually
+     merged. If not, it's simply skipped — it'll be checked again on the
+     next push.
+   - If it is merged, reads the real HTML file right off disk (this
+     workflow runs after checkout of the now-updated `main`, so the merged
+     file is right there), strips it down to plain text, and asks Claude to
+     draft a LinkedIn version and a Facebook version of it — strictly from
+     that real published text, same no-invented-facts rule as everywhere
+     else in this pipeline.
+   - Writes **Published URL**, **Live At** (today's date), **LinkedIn
+     Post**, and **Facebook Post** back to the row.
+3. Writing **Live At** is what triggers an Airtable automation (see "Stage
+   3.5 — One-time setup" below) that emails you the live link plus both
+   social drafts. This script itself never sends an email and never posts
+   anything to LinkedIn or Facebook — you review and post those yourself.
+4. Nothing here is destructive or hard to retry: a row only gets picked up
+   while its Live At is blank, and merge status is re-checked fresh every
+   time, so a slow-to-merge PR just gets checked again on the next push
+   with zero side effects in between.
+
+### Stage 3.5 — One-time setup
+
+No new GitHub secret is needed — this reuses `AIRTABLE_PAT`,
+`ANTHROPIC_API_KEY`, and the automatic `GITHUB_TOKEN`. Two things to set up
+once, though:
+
+1. **`SITE_BASE_URL` repository variable** (shared with Stage 4) — go to
+   **Settings → Secrets and variables → Actions → Variables tab** (not
+   Secrets — this isn't sensitive) and add a repository variable named
+   `SITE_BASE_URL` set to your real site URL (e.g.
+   `https://marvindarvis.com/` or your GitHub Pages URL, with a trailing
+   slash or not — the scripts handle either). Skip this and Published URL
+   is simply left blank; everything else (Live At, the social drafts, the
+   email) still works.
+2. **Turn on the two Airtable automations** this setup created for you:
+   - **"Notify Marvin — Blog post live"** — fires when a Draft's Live At
+     becomes non-empty.
+   - **"Notify Marvin — Afrinex issue live"** — fires when a Weekly
+     Newsletters row's Live At becomes non-empty.
+
+   Both were created in a draft/off state (Airtable's API can't turn an
+   automation on for you) — open your base, go to the **Automations** tab,
+   find each one, and switch it on. Until you do, Stage 3.5 will still
+   confirm things are live and fill in the social drafts, but you won't get
+   an email about it.
+
+### Stage 3.5 — Triggering a run manually (to test it)
+
+Same pattern: **Actions** tab → **On-Publish Notify** in the sidebar →
+**Run workflow**. If nothing has an open PR waiting on confirmation, you'll
+see:
+
+```
+No published-but-unconfirmed rows found — nothing to do. Exiting cleanly.
+```
+
+To generate something to test with: merge any Stage 3 PR normally (that
+push to `main` triggers this workflow automatically — you don't need to
+run it manually at all in normal use), or run it manually right after a
+merge if you don't want to wait. Then check the relevant Draft or Weekly
+Newsletters row in Airtable for Published URL / Live At / LinkedIn Post /
+Facebook Post, and check your email for the notification once you've
+turned the automations on.
 
 ## Troubleshooting
 
@@ -357,32 +548,34 @@ every block in `content` and concatenate whichever ones have
 up before or after it. (Found and fixed 2026-09-09, during Stage 4's
 rollout — see git history if you want the full story.)
 
-## Stage 4 — Weekly Newsletter: how it works
+## Stage 4 — Weekly Newsletter (Afrinex issue compiler): how it works
 
-Once a week, this stage compiles a **draft** email for the Afrinex
-newsletter — it never sends anything. Two kinds of content go into it:
+Once a week, this stage compiles the content for the next **Afrinex
+issue** — published as a real page on the site once you approve it, not
+emailed to anyone. Two kinds of content go into it:
 
 1. **"This week on the blog"** — any Drafts row with Target "Blog" that
    already has a GitHub PR URL (meaning Stage 3 has published it, or at
-   least opened a PR for it) and hasn't been recapped in a previous
-   newsletter yet.
+   least opened a PR for it) and hasn't been recapped in a previous issue
+   yet.
 2. **"Worth a quick read"** — Candidates Stage 2 flagged as Status
    "Newsletter Candidate" (relevant, but not enough for a full post) that
-   haven't been turned into a newsletter blurb yet. Each gets a short
-   (2-3 sentence) blurb written by Claude, strictly from that Candidate's
-   own title/source/summary — the same no-invented-facts rule used for
-   blog drafts.
+   haven't been turned into a blurb yet. Each gets a short (2-3 sentence)
+   blurb written by Claude, strictly from that Candidate's own
+   title/source/summary — the same no-invented-facts rule used for blog
+   drafts.
 
 Every included item becomes (or already is) a row in the **Drafts** table
 (newsletter blurbs get Target "Newsletter"), and all of them get linked
 from one new **Weekly Newsletters** row for the week, with its **Status**
-set to "Needs Review" and an explicit Editor's Note placeholder in the
-compiled email. The email itself is pushed to Buttondown as a **draft
-only** — nothing is sent until you open it in Buttondown, add your own
-Editor's Note, and click Send yourself. The Weekly Newsletters row's
-**Buttondown Draft URL** field is filled in if Buttondown's response
-includes one; if not, the run's log tells you to check your Buttondown
-dashboard's Drafts tab directly rather than guessing at a link.
+set to "Needs Review" and the full compiled text written into its
+**Compiled Body** field, with an explicit Editor's Note placeholder at the
+top. Read it there in Airtable, replace the placeholder in the **Editor's
+Note** field with your own take on the week if you want one, and when
+you're happy, set that row's **Status** to `Approved`. That's it — nothing
+publishes automatically. Stage 3 (the same workflow that publishes blog
+posts) is what picks up an Approved issue and turns it into a real
+`afrinex-issue-*.html` page via a PR, exactly like a blog post.
 
 One run never processes the same blog post or the same Candidate twice:
 once a Draft is linked into a Weekly Newsletters row, it's excluded from
@@ -393,23 +586,17 @@ up again automatically next week, with no separate retry step needed.
 
 ## Stage 4 — One-time setup
 
-This stage needs one new secret: a **Buttondown API key**.
+No new secret is needed beyond `AIRTABLE_PAT` and `ANTHROPIC_API_KEY`,
+which Stage 2 already requires. (Buttondown has been removed entirely —
+Afrinex issues publish to the site now, not to an email list, so there's
+nothing to configure there anymore. If you still have a Buttondown
+account/API key lying around from before, it's simply unused; feel free to
+cancel it.)
 
-1. **Create a Buttondown account** at [buttondown.email](https://buttondown.email)
-   if you don't already have one (this is the "Decision: Buttondown" ESP
-   from the Claude Project doc).
-2. **Get your API key** from your Buttondown account's settings/API page.
-3. **Add it as a GitHub repo secret**, the same way as the others:
-   **Settings → Secrets and variables → Actions → New repository secret**.
-   - Name: `BUTTONDOWN_API_KEY`
-   - Value: paste the key.
-   - Save.
-4. **Optional but recommended**: open
-   `.github/workflows/weekly-newsletter.yml` and set `SITE_BASE_URL` to
-   your real site's URL (e.g. `https://marvindarvis.com` or your GitHub
-   Pages URL) so the blog recap section can link straight to your Insights
-   page. If you leave it blank, the recap just mentions the post by title
-   without a link.
+**Optional but recommended**: set the `SITE_BASE_URL` repository variable
+described in "Stage 3.5 — One-time setup" above — it's shared by both
+stages, so you only need to set it once, and it's what lets the blog recap
+section link straight to your Insights page.
 
 ## Stage 4 — Cost controls
 
@@ -429,29 +616,19 @@ in the sidebar → **Run workflow**. If there's nothing new to include,
 you'll see:
 
 ```
-Nothing new for this week's newsletter — nothing to do. Exiting cleanly.
+Nothing new for this week's issue — nothing to do. Exiting cleanly.
 ```
 
 Otherwise, watch for a line like:
 
 ```
-Found 1 blog post(s) to recap and 2 new newsletter mention(s) to draft (cap 15).
+Found 1 blog post(s) to recap and 2 new mention(s) to draft (cap 15).
 ```
 
-Then check: Airtable should show a new Weekly Newsletters row (Status
-"Needs Review") linked to the relevant Drafts, and your Buttondown
-account should show a new draft email under its Drafts tab.
-
-## Stage 4 — Known limitation
-
-The blog recap links to your site's general Insights page, not the exact
-new post's URL — the automation never persists the exact filename Stage 3
-generates for a published post anywhere in Airtable, so there's nothing
-precise to link to yet. This is fine in practice (the post is right at the
-top of the Insights listing), but if you'd like an exact deep link instead,
-that would mean having Stage 3 write the generated filename/URL back to
-the Draft record for Stage 4 to read later — a reasonable small
-enhancement if it bothers you.
+Then check Airtable: you should see a new Weekly Newsletters row (Status
+"Needs Review") with its Compiled Body filled in, linked to the relevant
+Drafts. Set its Status to "Approved" and trigger a Publish Approved Drafts
+run (see Stage 3 above) to see it become a real page.
 
 ## Known source issues (see Airtable Sources table for details)
 
@@ -474,16 +651,26 @@ Airtable — no code change needed.
 
 ## What's next
 
-All four planned stages are built. The Editorial OS is now a complete
-loop: sources are monitored daily, candidates are scored and drafted,
-approved drafts become live pages through a PR you merge, and a weekly
-newsletter draft is compiled automatically for you to review and send.
-Nothing at any stage reaches your site or your subscribers' inboxes
-without you taking an explicit action first (merging a PR, clicking Send
-in Buttondown).
+All five stages are built. The Editorial OS is now a complete loop:
+sources are monitored daily, candidates are scored and drafted, approved
+content (blog posts and Afrinex issues alike) becomes a real page through
+a PR you merge, and once it's live you get an email with LinkedIn and
+Facebook drafts ready for you to personally review and post. Nothing at
+any stage reaches your site, your inbox, or any social platform without
+you taking an explicit action first (approving something in Airtable,
+merging a PR, or clicking post on LinkedIn/Facebook yourself).
+
+The "Join Afrinex" signup form on afrinex.html is still Formspree, per
+your choice — each signup emails you directly with their name, email, and
+what drew them to Afrinex, and you reach out personally from there. There
+is no separate running subscriber list/table in Airtable; if that ever
+becomes worth building (e.g. once signups get too frequent to track from
+email alone), it's a small, well-scoped addition — a Subscribers table
+plus swapping the form's target.
 
 Possible future refinements (not required, just ideas):
-- Persist each published post's exact filename/URL so Stage 4's blog
-  recap can link directly to it instead of the general Insights page.
 - Build the PubMed saved-search RSS feeds noted in "Known source issues"
   below, to bring the blocked/needs-follow-up sources online.
+- If Formspree-by-email ever feels like too much manual bookkeeping, add
+  an Airtable Subscribers table + form so Afrinex signups are tracked in
+  one place alongside everything else.
