@@ -8,9 +8,10 @@ a community page, the Afrinex newsletter, and contact. No build step — open
 
 ```
 marvin-site/
-├── index.html          Home
-├── about.html           Full bio (with photo)
-├── focus-areas.html     The 6 focus areas
+├── CONTENT-GUIDE.md     How to make common content changes yourself
+├── index.html          Home — image, full bio, leadership, education, interests
+├── about.html           Short bio + link to full Home story, "How I work"
+├── focus-areas.html     "Interests" in the nav — the 6 professional interests, in depth
 ├── insights.html        Insights/writing listing
 ├── insight-post.html    One full sample post (template for new posts)
 ├── community.html       Who it's for + a promo card linking to Afrinex
